@@ -1,0 +1,56 @@
+---
+# Installation tasks
+
+- name: Install OpenJDK Java
+  become: yes
+    apt:
+      name: openjdk-8-jdk
+      state: present
+
+- name: "sonatype_nexus_download"
+  get_url:
+    url: "https://download.sonatype.com/nexus/oss/nexus-2.14.19-01-bundle.zip"
+    dest: "/opt/"
+  register: download
+
+- name: "Extract archive"
+  become: yes
+  unarchive:
+    src: "/opt/"
+    dest: "/opt/"
+    remote_src: yes
+    owner: "nexus"
+    list_files: yes
+- name: "Move" 
+  command: mv /opt/nexus-2.14.19-01 /opt/nexus
+  
+- file:
+    path: /opt/nexus
+    owner: nexus
+    group: nexus
+    mode: 0644
+- file:
+    path: /opt/sonatype-work
+    owner: nexus
+    group: nexus
+    mode: 0644
+
+- name: Create work directory
+  become: yes
+  file:
+    path: "/opt/nexus"
+    state: directory
+    owner: "nexus"
+    group: "nexus"
+
+- name: Create systemd file to run nexus as a service
+  become: yes
+  template:
+    src: nexus.service.j2
+    dest: "/opt/nexus"
+    owner: "nexus"
+    group: "nexus"
+    mode: '0644'
+  notify:
+    - Reload systemd daemon
+    - Restart Nexus
